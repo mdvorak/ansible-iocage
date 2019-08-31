@@ -62,7 +62,7 @@ EXAMPLES = """
     pkglist: /path/to/pkglist.json
     properties:
       ip4_addr: 'lo1|10.1.0.5'
-      boot: 'on'
+      boot: on
       allow_sysvipc: 1
       defaultrouter: '10.1.0.1'
 
@@ -73,7 +73,7 @@ EXAMPLES = """
     pkglist: /path/to/pkglist.json
     properties:
       ip4_addr: 'lo1|10.1.0.5'
-      boot: 'on'
+      boot: on
       allow_sysvipc: 1
       defaultrouter: '10.1.0.1'
 
@@ -228,12 +228,10 @@ def _props_to_str(props):
         _val = props[_prop]
         if _val == '-' or _val == '' or not _val:
             continue
-        if _val in ['on', True]:
-            argstr += '{0}=1 '.format(_prop)
-        elif _val in ['off', False]:
-            argstr += '{0}=0 '.format(_prop)
-        elif _val in ['-','none']:
-            argstr += '{0}={1} '.format(_prop,_val)
+        if _val in [True]:
+            argstr += '{0}=on '.format(_prop)
+        elif _val in [False]:
+            argstr += '{0}=off '.format(_prop)
         else:
             argstr += '{0}="{1}" '.format(_prop,str(_val))
 
@@ -243,9 +241,13 @@ def release_fetch(module, iocage_path, update=False, release="NO-RELEASE", compo
     if not module.check_mode:
         if update:
             args += " -U"
-        for _component in components:
-            if _component != "":
-                args += " -F {}".format(_component)
+        if len(components):
+            # MANIFEST is mandatory
+            components.append('MANIFEST')
+            # Use set to remove duplicates
+            for _component in set(components):
+                if _component != "":
+                    args += " -F {}".format(_component)
         cmd = "{0} fetch -r {1} {2}".format(iocage_path, release, args)
         rc = 1
         rc, out, err = module.run_command(cmd)
@@ -371,10 +373,10 @@ def jail_set(module, iocage_path, name, properties={}):
         propval=None
         _val = properties[_property]
         _oval = _existing_props[_property]
-        if _val in [0,'off',False]:
-            propval = 0
-        elif _val in [1,'on',True]:
-            propval = 1
+        if _val in [False]:
+            propval = 'off'
+        elif _val in [True]:
+            propval = 'on'
         elif isinstance(_oval,str):
             if _val == '':
                 propval = 'none'
