@@ -33,6 +33,7 @@ fetch host's RELEASE, limited to base and doc components:
 ```
 iocage: state=fetched components=base.txz,doc.txz
 ```
+_note: if release is already fetched, it won't update downloaded components_
 
 create basejail:
 ```

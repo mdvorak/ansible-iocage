@@ -7,8 +7,8 @@
 
   tasks:
     - name: Check if release 12.0-RELEASE exists
-      iocage: state=fetched release=12.0-RELEASE
-  
+      iocage: state=fetched release=12.0-RELEASE components=base.txz
+
     - name: Check if basejail exists
       iocage: state=exists name=test_basejail_12_0_RELEASE
       ignore_errors: true
