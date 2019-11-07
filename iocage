@@ -2,17 +2,17 @@
 # -*- coding: utf-8 -*-
 
 # Copyright 2015, Perceivon Hosting Inc.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 # 1. Redistributions of source code must retain the above copyright notice, this
 #    list of conditions and the following disclaimer.
-# 
+#
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 #    this list of conditions and the following disclaimer in the documentation
 #    and/or other materials provided with the distribution.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY [COPYRIGHT HOLDER] AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -24,7 +24,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import sys
 import re
 
 DOCUMENTATION = """
@@ -313,6 +312,7 @@ def jail_exec(module, iocage_path, name, user="root", cmd='/usr/bin/true'):
 
     return True, _msg, out, err
 
+
 def jail_pkg(module, iocage_path, name, cmd='info'):
     rc = 1
     out = ""
@@ -330,11 +330,13 @@ def jail_pkg(module, iocage_path, name, cmd='info'):
 
     return _changed, _msg, out, err
 
+
 def _jail_get_properties(module, iocage_path, name):
     rc = 1
     out = ""
+    properties = {}
+
     if name and name != "":
-        properties = {}
         cmd = "{0} get all {1}".format(iocage_path, name)
         rc, out, err = module.run_command(cmd)
         if rc == 0:
@@ -353,7 +355,10 @@ def _jail_get_properties(module, iocage_path, name):
 
     return properties
 
-def jail_set(module, iocage_path, name, properties={}):
+
+def jail_set(module, iocage_path, name, properties=None):
+    if properties is None:
+        properties = {}
 
     _changed = False
     rc = 1
@@ -377,15 +382,19 @@ def jail_set(module, iocage_path, name, properties={}):
             propval = 'off'
         elif _val in [True]:
             propval = 'on'
-        elif isinstance(_oval,str):
+        elif isinstance(_oval, str):
             if _val == '':
                 propval = 'none'
             else:
                 propval = '{0}'.format(_val)
         else:
-            module.fail_json(msg="Unable to set attribute {0} to {1} for jail {2}".format(_property,str(_val).replace("'","'\\''"),name))
+            module.fail_json(
+                msg="Unable to set attribute {0} to {1} for jail {2}".format(_property, str(_val).replace("'", "'\\''"),
+                                                                             name))
 
-        if 'CHECK_NEW_JAIL' in _existing_props or ( _property in _existing_props.keys() and str(_existing_props[_property]) != str(propval) ) and propval != None:
+        if 'CHECK_NEW_JAIL' in _existing_props or (
+                _property in _existing_props.keys() and str(_existing_props[_property]) != str(
+                propval)) and propval is not None:
             _props_to_be_changed[_property] = propval
 
     if len(_props_to_be_changed) > 0:
@@ -406,8 +415,8 @@ def jail_set(module, iocage_path, name, properties={}):
             if not rc == 0 or ( rc == 1 and "is already a jail!" in err ):
                 module.fail_json(msg="Attributes could not be set on jail '{0}'.\ncmd:\n{1}\nstdout:\n{2}\nstderr:\n{3}".format(name, cmd, out, err))
 
-            _msg = "properties {0} were set on jail '{1}' with cmd={2}.".format(str(_props_to_be_changed.keys()) ,name, cmd)
-
+            _msg = "properties {0} were set on jail '{1}' with cmd={2}.".format(str(_props_to_be_changed.keys()), name,
+                                                                                cmd)
 
         else:
             _msg = "properties {0} would have been changed for jail {1} with command {2}".format(str(_props_to_be_changed.keys()), name, cmd)
@@ -420,12 +429,17 @@ def jail_set(module, iocage_path, name, properties={}):
 
     return _changed, _msg
 
-def jail_create(module, iocage_path, name=None, properties={}, clone_from_name=None, clone_from_template=None, release=None, basejail=False, pkglist=None):
+
+def jail_create(module, iocage_path, name=None, properties=None, clone_from_name=None, clone_from_template=None,
+                release=None, basejail=False, pkglist=None):
+    if properties is None:
+        properties = {}
+
     rc = 1
     out = ""
     _msg = ""
 
-    if clone_from_name == None and clone_from_template == None:
+    if clone_from_name is None and clone_from_template is None:
         if basejail:
             cmd = "{0} create -b -r {2} -n {1}".format(iocage_path, name, release)
 
@@ -560,7 +574,7 @@ def main():
             #else:
             rc, out, err = module.run_command("uname -r")
             if rc != 0:
-                module_fail_json(msg="unable to run uname -r ???")
+                module.fail_json(msg="unable to run uname -r ???")
 
             try:
                 release = re.match('(\d+\.\d+)\-(RELEASE|RC\d+).*',out.strip()).group(1)+"-RELEASE"
@@ -665,7 +679,7 @@ def main():
                 else:
                     module.fail_json(msg="unable to create jail {0}\nbasejail {1} doesn't exist".format(name,clone_from))
 
-        if not name in facts["iocage_templates"] and not name in facts["iocage_jails"]:
+        if name not in facts["iocage_templates"] and name not in facts["iocage_jails"]:
             name, changed, _msg = jail_create(module, iocage_path, name, properties, clone_from_name, clone_from_template, release, do_basejail, pkglist)
             msgs.append(_msg)
         else:
@@ -675,13 +689,13 @@ def main():
                 msgs.append(_msg)
 
         if p["update"]:
-            if not release in facts["iocage_releases"]:
+            if release not in facts["iocage_releases"]:
                 release, _release_changed, _release_msg = release_fetch(module,iocage_path,update,release, components, args)
                 if _release_changed:
                     _msg += _release_msg
                     facts["iocage_releases"] = _get_iocage_facts(module,iocage_path,"releases")
 
-            release, changed, _msg = jail_update(module, iocage_path, name, release)
+            changed, _msg = jail_update(module, iocage_path, name)
             msgs.append(_msg)
 
 #        # re-set properties (iocage missing them on creation - iocage-sh bug)
